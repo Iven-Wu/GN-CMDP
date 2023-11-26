@@ -207,7 +207,6 @@ for k in range(num_iter):
 
     FIM = compute_fisher_information_matrix(prob)
 
-
     gradient_q = grad_new(qvals,prob,d_pi) / (1-gamma)
 
     # compute_natural_gradient(gradient_q,FIM)
@@ -230,7 +229,6 @@ for k in range(num_iter):
 
 
 ## Saving the 'Optmality gap array'. This can be loaded to make the figure again.
-# np.save('Softmax.npy',gap)
 
 f = plt.figure()
 plt.plot(np.array(gap))

@@ -185,7 +185,10 @@ for k in range(num_iter):
     gradient_q = grad_new(qvals,prob,d_pi) / (1-gamma)
     gradient_cons_q = grad_new(q_constrain_vals,prob,d_pi)/(1-gamma)
     
-    theta += alpha*(gradient_q+lam*gradient_cons_q)
+    gradient = gradient_q+lam*gradient_cons_q
+
+    gradient = gradient/np.linalg.norm(gradient)
+    theta += alpha*gradient
 
     ### constrain_violation
     violation = q_constrain_vals - constrain_threshold
@@ -206,7 +209,7 @@ plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Policy_CMDP.jpg")
+f.savefig("figs/Fig_Policy_GNPG_CMDP.jpg")
 f.clf()
 
 f = plt.figure()
@@ -214,6 +217,6 @@ plt.plot(np.array(violation_list))
 plt.title('Violation during training')
 plt.ylabel('Constrain Violation')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Violation_CMDP.jpg")
+f.savefig("figs/Fig_Violation_GNPG_CMDP.jpg")
 f.clf()
 
