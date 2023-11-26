@@ -30,7 +30,6 @@ constrain = np.random.uniform(0,1,size=(num_state*num_action))
 Start state distribution
 '''
 rho = np.ones(num_state)/num_state
-
 '''
 Input: probability vector, state, action
 Output: \nabla_{\theta} \pi_{\theta}(s,a)
@@ -134,6 +133,30 @@ def policy_iter(q_vals,num_state,num_action):
     new_policy = new_policy.flatten()
     return new_policy
 
+def compute_fisher_information_matrix(prob):
+    prob_reshaped = prob.reshape(num_state, num_action)
+    FIM = np.zeros((num_state * num_action, num_state * num_action))
+
+    for s in range(num_state):
+        for a in range(num_action):
+            for b in range(num_action):
+                if a == b:
+                    FIM[s * num_action + a, s * num_action + b] = prob_reshaped[s, a] * (1 - prob_reshaped[s, a])
+                else:
+                    FIM[s * num_action + a, s * num_action + b] = -prob_reshaped[s, a] * prob_reshaped[s, b]
+    
+    return FIM
+
+def compute_natural_gradient(gradient, FIM):
+    # Regularize FIM for numerical stability
+    reg_FIM = FIM + 1e-4 * np.eye(FIM.shape[0])
+    # Compute the inverse of the Fisher Information Matrix
+    FIM_inv = np.linalg.inv(reg_FIM)
+    # Compute natural gradient
+    natural_gradient = np.dot(FIM_inv, gradient)
+    return natural_gradient
+
+
 curr_policy = np.random.uniform(0,1,size=(num_state*num_action))
 new_policy = init_policy
 print('Starting policy',init_policy)
@@ -182,10 +205,17 @@ for k in range(num_iter):
     P_theta = np.matmul(Pi,prob_transition)
     d_pi = (1-gamma)*np.dot(np.transpose((np.linalg.inv(np.identity(num_state) - gamma*P_theta))),rho)
 
+    FIM = compute_fisher_information_matrix(prob)
+
+
     gradient_q = grad_new(qvals,prob,d_pi) / (1-gamma)
+
+    # compute_natural_gradient(gradient_q,FIM)
     gradient_cons_q = grad_new(q_constrain_vals,prob,d_pi)/(1-gamma)
     
-    theta += alpha*(gradient_q+lam*gradient_cons_q)
+    gradient_raw = gradient_q+lam*gradient_cons_q
+    gradient = compute_natural_gradient(gradient_raw,FIM)
+    theta += alpha*(gradient)
 
     ### constrain_violation
     violation = q_constrain_vals - constrain_threshold
@@ -207,7 +237,7 @@ plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Policy_CMDP.jpg")
+f.savefig("figs/Fig_Policy_NPG_CMDP.jpg")
 f.clf()
 
 f = plt.figure()
@@ -215,6 +245,6 @@ plt.plot(np.array(violation_list))
 plt.title('Violation during training')
 plt.ylabel('Constrain Violation')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Violation_CMDP.jpg")
+f.savefig("figs/Fig_Violation_NPG_CMDP.jpg")
 f.clf()
 

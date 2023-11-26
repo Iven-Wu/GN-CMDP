@@ -246,11 +246,11 @@ for k in range(num_iter):
 
 
 ## Saving the 'Optmality gap array'. This can be loaded to make the figure again.
-np.save('Softmax.npy',gap)
+# np.save('Softmax.npy',gap)
 
 f = plt.figure()
 plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("Fig_Policy_MDP.jpg")
+f.savefig("figs/Fig_Policy_MDP.jpg")
