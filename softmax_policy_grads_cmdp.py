@@ -154,16 +154,19 @@ print('Optimal Reward',ell_star)
 '''
 Policy gradient in action
 '''
-num_iter = 10000
+num_iter = 1000
+record_interval = 1
 stepsize = 0.1
-# Parameters for line search
+# alpha is the lr for theta
 alpha = 0.5
-beta = 0.5
-lam = 0.4
-constrain_threshold = 0.3
+# beta is the lr for lamda
+beta = 0.1
+lam = 0.5
+constrain_threshold = 3.
 
 theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 gap = []
+violation_list = []
 start_time = time.time()
 for k in range(num_iter):
     ### prob is the probability for the policy
@@ -181,16 +184,16 @@ for k in range(num_iter):
 
     gradient_q = grad_new(qvals,prob,d_pi) / (1-gamma)
     gradient_cons_q = grad_new(q_constrain_vals,prob,d_pi)/(1-gamma)
-    # step = find_step(theta,gradient,alpha,beta)
-    # gradient = gradient_q+lam*gradient_consl
     
     theta += alpha*(gradient_q+lam*gradient_cons_q)
 
     ### constrain_violation
     violation = q_constrain_vals - constrain_threshold
+    
+    violation_list.append(violation.mean())
     lam = np.maximum(lam-beta*violation,0)
 
-    if k % 50 == 0:
+    if k % record_interval == 0:
         avg_reward = ell(qvals,prob,rho)
         print('Optimality gap',ell_star - avg_reward)
         gap.append(ell_star - avg_reward)
@@ -203,6 +206,15 @@ f = plt.figure()
 plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
-plt.xlabel('Iteration number/1000')
-f.savefig("Fig_Softmax_Policy.jpg")
-f.savefig("Fig_Softmax_Policy.pdf")
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("Fig_Policy_CMDP.jpg")
+f.clf()
+
+f = plt.figure()
+plt.plot(np.array(violation_list))
+plt.title('Violation during training')
+plt.ylabel('Constrain Violation')
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("Fig_Violation_CMDP.jpg")
+f.clf()
+

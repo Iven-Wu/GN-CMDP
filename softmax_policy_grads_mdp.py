@@ -214,7 +214,8 @@ print('Optimal Reward',ell_star)
 '''
 Policy gradient in action
 '''
-num_iter = 10000
+num_iter = 1000
+record_interval = 1
 stepsize = 0.01
 # Parameters for line search
 alpha = 1
@@ -238,7 +239,7 @@ for k in range(num_iter):
     # step = find_step(theta,gradient,alpha,beta)
     step = alpha
     theta += step*gradient
-    if k % 50 == 0:
+    if k % record_interval == 0:
         avg_reward = ell(qvals,prob,rho)
         print('Optimality gap',ell_star - avg_reward)
         gap.append(ell_star - avg_reward)
@@ -251,6 +252,5 @@ f = plt.figure()
 plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
-plt.xlabel('Iteration number/1000')
-f.savefig("Fig_Softmax_Policy.jpg")
-f.savefig("Fig_Softmax_Policy.pdf")
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("Fig_Policy_MDP.jpg")
