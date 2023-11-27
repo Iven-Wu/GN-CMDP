@@ -154,15 +154,15 @@ print('Optimal Reward',ell_star)
 '''
 Policy gradient in action
 '''
-num_iter = 1000
+num_iter = 100
 record_interval = 1
 stepsize = 0.1
 # alpha is the lr for theta
-alpha = 0.5
+alpha = 0.2
 # beta is the lr for lamda
 beta = 0.1
 lam = 0.5
-constrain_threshold = 3.
+constrain_threshold = 4.
 
 theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 gap = []
@@ -198,7 +198,7 @@ for k in range(num_iter):
 
     if k % record_interval == 0:
         avg_reward = ell(qvals,prob,rho)
-        print('Optimality gap',ell_star - avg_reward)
+        # print('Optimality gap',ell_star - avg_reward)
         gap.append(ell_star - avg_reward)
 
 

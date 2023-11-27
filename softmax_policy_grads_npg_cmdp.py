@@ -138,13 +138,10 @@ def compute_fisher_information_matrix(prob):
     FIM = np.zeros((num_state * num_action, num_state * num_action))
 
     for s in range(num_state):
-        for a in range(num_action):
-            for b in range(num_action):
-                if a == b:
-                    FIM[s * num_action + a, s * num_action + b] = prob_reshaped[s, a] * (1 - prob_reshaped[s, a])
-                else:
-                    FIM[s * num_action + a, s * num_action + b] = -prob_reshaped[s, a] * prob_reshaped[s, b]
-    
+        start = s*num_action
+        end = (s+1)*num_action
+        FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
+
     return FIM
 
 def compute_natural_gradient(gradient, FIM):
@@ -177,11 +174,11 @@ print('Optimal Reward',ell_star)
 '''
 Policy gradient in action
 '''
-num_iter = 1000
+num_iter = 100
 record_interval = 1
 stepsize = 0.1
 # alpha is the lr for theta
-alpha = 0.5
+alpha = 0.2
 # beta is the lr for lamda
 beta = 0.1
 lam = 0.5
@@ -224,7 +221,7 @@ for k in range(num_iter):
 
     if k % record_interval == 0:
         avg_reward = ell(qvals,prob,rho)
-        print('Optimality gap',ell_star - avg_reward)
+        # print('Optimality gap',ell_star - avg_reward)
         gap.append(ell_star - avg_reward)
 
 

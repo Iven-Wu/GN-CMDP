@@ -218,8 +218,7 @@ num_iter = 1000
 record_interval = 1
 stepsize = 0.01
 # Parameters for line search
-alpha = 1
-beta = 0.7
+alpha = 0.2
 theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 gap = []
 start_time = time.time()
@@ -241,7 +240,7 @@ for k in range(num_iter):
     theta += step*gradient
     if k % record_interval == 0:
         avg_reward = ell(qvals,prob,rho)
-        print('Optimality gap',ell_star - avg_reward)
+        # print('Optimality gap',ell_star - avg_reward)
         gap.append(ell_star - avg_reward)
 
 
