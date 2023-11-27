@@ -18,25 +18,6 @@ if __name__ == '__main__':
     num_action = rm_env.num_action
     gamma = rm_env.gamma
 
-
-    # raw_vec = np.random.uniform(0,1,size=(num_state,num_action))
-    # prob_vec = raw_vec/raw_vec.sum(axis=1,keepdims=1)
-    # init_policy = prob_vec.flatten()
-
-    # curr_policy = np.random.uniform(0,1,size=(num_state*num_action))
-    # new_policy = init_policy
-    # print('Starting policy',init_policy)
-
-    # while np.count_nonzero(curr_policy - new_policy) > 0:
-    #     curr_policy = new_policy
-    #     Pi = rm_env.get_Pi(curr_policy)
-    #     mat = np.identity(num_state*num_action) - gamma*np.matmul(rm_env.prob_transition,Pi)
-    #     q_vals = np.dot(np.linalg.inv(mat),rm_env.reward)
-    #     new_policy = rm_env.policy_iter(q_vals)
-    # print('Final policy',new_policy)
-    # ell_star = rm_env.ell(q_vals,new_policy)
-    # print('Optimal Reward',ell_star)
-
     PG_agent = Agent(type='pg')
     NPG_agent = Agent(type='npg')
     GNPG_agent = Agent(type='gnpg')
