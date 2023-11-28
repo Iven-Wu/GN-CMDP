@@ -9,18 +9,22 @@ import time
 from env import Random_Env
 from agent import Agent
 
+from tqdm import tqdm
+
 
 
 if __name__ == '__main__':
+    num_state = 20
+    num_action = 10
     np.random.seed(10) 
-    rm_env = Random_Env(num_state=10,num_action=5)
+    rm_env = Random_Env(num_state=num_state,num_action=num_action)
     num_state = rm_env.num_state
     num_action = rm_env.num_action
     gamma = rm_env.gamma
 
-    PG_agent = Agent(type='pg')
-    NPG_agent = Agent(type='npg')
-    GNPG_agent = Agent(type='gnpg')
+    PG_agent = Agent(num_state=num_state,num_action=num_action,type='pg')
+    NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg')
+    GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg')
 
     num_iter = 1000
     record_interval = 1
@@ -35,7 +39,7 @@ if __name__ == '__main__':
     start_time = time.time()
     agent_list = PG_agent,NPG_agent,GNPG_agent
     for agent in agent_list:
-        for k in range(num_iter):
+        for k in tqdm(range(num_iter)):
             ### prob is the probability for the policy
             prob = rm_env.theta_to_policy(agent.theta)
             qvals,q_constrain_vals = rm_env.get_q(prob)
@@ -48,6 +52,8 @@ if __name__ == '__main__':
             avg_reward = rm_env.ell(qvals,prob)
             agent.reward_list.append(avg_reward)
             agent.violation_list.append(violation.mean())
+
+            
     
 
     rm_env.plot_curve([agent.reward_list for agent in agent_list],

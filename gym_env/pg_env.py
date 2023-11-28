@@ -1,73 +1,75 @@
 import gym
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
+import numpy as np
 
-# Neural network for the policy model
+# Define the policy network
 class PolicyNetwork(nn.Module):
-    def __init__(self, n_inputs, n_actions):
+    def __init__(self):
         super(PolicyNetwork, self).__init__()
-        self.fc = nn.Sequential(
-            nn.Linear(n_inputs, 64),
-            nn.ReLU(),
-            nn.Linear(64, n_actions),
-            nn.Softmax(dim=-1)
-        )
+        self.fc1 = nn.Linear(4, 128)
+        self.fc2 = nn.Linear(128, 2)
 
     def forward(self, x):
-        return self.fc(x)
+        x = F.relu(self.fc1(x))
+        x = F.softmax(self.fc2(x), dim=1)
+        return x
 
-# Function to select an action based on policy probabilities
 def select_action(policy_net, state):
     state = torch.from_numpy(state).float().unsqueeze(0)
     probs = policy_net(state)
     action = torch.multinomial(probs, 1).item()
     return action
 
-# Function to compute returns
-def compute_returns(rewards, gamma=0.99):
-    returns = []
-    G = 0
-    for r in reversed(rewards):
-        G = r + gamma * G
-        returns.insert(0, G)
+def compute_returns(rewards, gamma):
+    rewards = torch.Tensor(rewards)
+    returns = torch.zeros_like(rewards)
+
+    running_returns = 0
+
+    for t in reversed(range(0, len(rewards))):
+        running_returns = rewards[t] + gamma * running_returns 
+        returns[t] = running_returns
+
     return returns
 
-# Main training loop
-def train_policy_gradient(env_name='CartPole-v1', n_episodes=1000, gamma=0.99, lr=0.01):
+def train(env_name='CartPole-v1', n_episodes=500, gamma=0.99, learning_rate=0.01):
     env = gym.make(env_name)
-    n_inputs = env.observation_space.shape[0]
-    n_actions = env.action_space.n
-    policy_net = PolicyNetwork(n_inputs, n_actions)
-    optimizer = optim.Adam(policy_net.parameters(), lr=lr)
+    policy_net = PolicyNetwork()
+    optimizer = optim.Adam(policy_net.parameters(), lr=learning_rate)
 
     for episode in range(n_episodes):
-        state = env.reset()
-        saved_log_probs = []
-        rewards = []
-        done = False
+        state,_ = env.reset()
+        episode_states, episode_actions, episode_rewards = [], [], []
 
-        while not done:
+        while True:
             action = select_action(policy_net, state)
-            state, reward, done, _ = env.step(action)
-            saved_log_probs.append(torch.log(policy_net(torch.from_numpy(state).float())[action]))
-            rewards.append(reward)
+            next_state, reward, done, _,_ = env.step(action)
+            episode_states.append(state)
+            episode_actions.append(action)
+            episode_rewards.append(reward)
 
-        returns = compute_returns(rewards, gamma)
-        policy_loss = []
-        for log_prob, G in zip(saved_log_probs, returns):
-            policy_loss.append(-log_prob * G)
-        policy_loss = torch.cat(policy_loss).sum()
+            if done:
+                break
+            state = next_state
 
+        returns = compute_returns(episode_rewards, gamma)
         optimizer.zero_grad()
-        policy_loss.backward()
-        optimizer.step()
 
-        if episode % 100 == 0:
-            print(f'Episode {episode}/{n_episodes}: Total Reward: {sum(rewards)}')
+        states = torch.from_numpy(np.stack(episode_states)).float()
+        probs = policy_net(states)
+        m = torch.distributions.Categorical(probs)
+        loss = -m.log_prob(torch.tensor(episode_actions)) * returns
+        loss = loss.mean()
+        loss.backward()
+
+        optimizer.step()
+        if episode % 50 == 0:
+            print(f'Episode {episode}: Total Reward: {sum(episode_rewards)}')
 
     env.close()
 
 # Run the training
-train_policy_gradient()
+train()
