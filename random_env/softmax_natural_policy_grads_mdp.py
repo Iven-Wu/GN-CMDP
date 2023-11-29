@@ -17,7 +17,6 @@ Each row sums up to one. P[s,a,s']
 '''
 raw_transition = np.random.uniform(0,1,size=(num_state*num_action,num_state))
 prob_transition = raw_transition/raw_transition.sum(axis=1,keepdims=1)
-print(prob_transition)
 '''
 Random positive rewards
 '''
@@ -82,6 +81,24 @@ def grad_new(qvals,prob,d_pi):
     # Sum over states and squeeze to remove singleton dimension
     return grad
 
+def compute_fisher_information_matrix(prob):
+    prob_reshaped = prob.reshape(num_state, num_action)
+    FIM = np.zeros((num_state * num_action, num_state * num_action))
+
+    for s in range(num_state):
+        start = s*num_action
+        end = (s+1)*num_action
+        FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
+    return FIM
+
+def compute_natural_gradient(gradient, FIM):
+    # Regularize FIM for numerical stability
+    reg_FIM = FIM + 1e-4 * np.eye(FIM.shape[0])
+    # Compute the inverse of the Fisher Information Matrix
+    FIM_inv = np.linalg.inv(reg_FIM)
+    # Compute natural gradient
+    natural_gradient = np.dot(FIM_inv, gradient)
+    return natural_gradient
 
 '''
 The overall reward function \ell(\theta). 
@@ -206,6 +223,8 @@ for k in range(num_iter):
     d_pi = (1-gamma)*np.dot(np.transpose((np.linalg.inv(np.identity(num_state) - gamma*P_theta))),rho)
 
     gradient = grad_new(qvals,prob,d_pi) / (1-gamma)
+    fisher_mat_inv = compute_fisher_information_matrix(prob)
+    gradient = compute_natural_gradient(gradient, fisher_mat_inv)
     # step = find_step(theta,gradient,alpha,beta)
     step = alpha
     theta += step*gradient
@@ -221,4 +240,11 @@ plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Policy_MDP.jpg")
+f.savefig("figs/Fig_Natural_Policy_Grad_MDP.jpg")
+
+
+
+
+
+
+
