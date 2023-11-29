@@ -41,9 +41,10 @@ class Agent(Random_Env):
 
     def compute_natural_gradient(self,gradient, FIM):
         # Regularize FIM for numerical stability
-        reg_FIM = FIM + 1e-4 * np.eye(FIM.shape[0])
+        # reg_FIM = FIM + 1e-7 * np.eye(FIM.shape[0])
+        reg_FIM = FIM
         # Compute the inverse of the Fisher Information Matrix
-        FIM_inv = np.linalg.inv(reg_FIM)
+        FIM_inv = np.linalg.pinv(reg_FIM)
         # Compute natural gradient
         natural_gradient = np.dot(FIM_inv, gradient)
         return natural_gradient

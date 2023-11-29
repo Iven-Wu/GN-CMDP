@@ -9,9 +9,9 @@ import os
 
 
 class Random_Env():
-    def __init__(self,num_state=10,num_action=5):
+    def __init__(self,num_state=10,num_action=5,gamma=0.9,policy_type='softmax'):
         np.random.seed(10) 
-        self.gamma = 0.9
+        self.gamma = gamma
         self.num_state, self.num_action = num_state,num_action
 
         raw_transition = np.random.uniform(0,1,size=(num_state*num_action,num_state))
@@ -22,6 +22,8 @@ class Random_Env():
         self.constrain = np.random.uniform(0,1,size=(num_state*num_action))
 
         self.rho = np.ones(num_state)/num_state
+        ### softmax or direct
+        self.policy_type = policy_type
     
     ### compute the gradient for policy gradient algorithm
     def grad(self,qvals,prob,d_pi):
@@ -30,7 +32,10 @@ class Random_Env():
         prob_reshaped = prob.reshape(self.num_state, self.num_action)
 
         # This is a vectorized form of np.diag(prob_reshaped[state]) - np.outer(prob_reshaped[state], prob_reshaped[state])
-        grad_pi = np.eye(self.num_action)[np.newaxis, :, :] * prob_reshaped[:, np.newaxis, :] - prob_reshaped[:, :, np.newaxis] * prob_reshaped[:, np.newaxis, :]
+        if self.policy_type == 'softmax':
+            grad_pi = np.eye(self.num_action)[np.newaxis, :, :] * prob_reshaped[:, np.newaxis, :] - prob_reshaped[:, :, np.newaxis] * prob_reshaped[:, np.newaxis, :]
+        elif self.policy_type == 'direct':
+            grad_pi = np.eye(self.num_action)[np.newaxis,:,:]
         # Compute state_grad for all states
         # Broadcasting is used to vectorize the computation
         state_grads = np.matmul(grad_pi, qvals_reshaped[:,:,np.newaxis])
@@ -56,6 +61,7 @@ class Random_Env():
         theta_reshaped = theta.reshape((self.num_state, self.num_action))
         # Compute the exponential of each element
         exp_theta = np.exp(theta_reshaped)
+
         # Normalize each row to get probabilities
         prob = exp_theta / np.sum(exp_theta, axis=1, keepdims=True)
         # Flatten the array back to 1D if needed
@@ -96,6 +102,29 @@ class Random_Env():
         q_constrain_vals = np.dot(np.linalg.inv(mat),self.constrain)
         return qvals,q_constrain_vals
     
+    def get_optimum(self,):
+        raw_vec = np.random.uniform(0,1,size=(self.num_state,self.num_action))
+        prob_vec = raw_vec/raw_vec.sum(axis=1,keepdims=1)
+        init_policy = prob_vec.flatten()
+
+        curr_policy = np.random.uniform(0,1,size=(self.num_state*self.num_action))
+        new_policy = init_policy
+        print('Starting policy',init_policy)
+
+        ### use policy iteration to find out the optimal one
+        while np.count_nonzero(curr_policy - new_policy) > 0:
+            curr_policy = new_policy
+            Pi = self.get_Pi(curr_policy)
+            mat = np.identity(self.num_state*self.num_action) - self.gamma*np.matmul(self.prob_transition,Pi)
+            q_vals = np.dot(np.linalg.inv(mat),self.reward)
+            new_policy = self.policy_iter(q_vals)
+        
+        print('Final policy',new_policy)
+
+        ell_star = self.ell(q_vals,new_policy)
+        print('Optimal Reward',ell_star)
+        return ell_star
+
     def plot_curve(self,reward,violation,label,record_interval=1,method='pg',out_dir='figs/'):
         os.makedirs(out_dir,exist_ok=True)
 
