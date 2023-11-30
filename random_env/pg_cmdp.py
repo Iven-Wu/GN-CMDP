@@ -15,16 +15,17 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
     num_state = 10
-    num_action = 10
+    num_action = 5
     np.random.seed(10) 
-    rm_env = Random_Env(num_state=num_state,num_action=num_action,gamma=0.9,policy_type='softmax')
+    policy_type = 'softmax'
+    rm_env = Random_Env(num_state=num_state,num_action=num_action,gamma=0.9,policy_type=policy_type)
     num_state = rm_env.num_state
     num_action = rm_env.num_action
     gamma = rm_env.gamma
 
-    PG_agent = Agent(num_state=num_state,num_action=num_action,type='pg')
-    NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg')
-    GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg')
+    PG_agent = Agent(num_state=num_state,num_action=num_action,type='pg',policy_type=policy_type)
+    NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg',policy_type=policy_type)
+    GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg',policy_type=policy_type)
 
     ell_star = rm_env.get_optimum()
 
@@ -59,4 +60,4 @@ if __name__ == '__main__':
             agent.violation_list.append(-violation.mean())
 
     rm_env.plot_curve([agent.reward_list for agent in agent_list],
-                      [agent.violation_list for agent in agent_list],[agent.type for agent in agent_list],method='softmax')
+                      [agent.violation_list for agent in agent_list],[agent.type for agent in agent_list],method=policy_type)

@@ -9,8 +9,8 @@ import os
 
 
 class Random_Env():
-    def __init__(self,num_state=10,num_action=5,gamma=0.9,policy_type='softmax'):
-        np.random.seed(10) 
+    def __init__(self,num_state,num_action,policy_type,gamma=0.9):
+        np.random.seed(10)
         self.gamma = gamma
         self.num_state, self.num_action = num_state,num_action
 
@@ -30,12 +30,11 @@ class Random_Env():
         ### grad is (s,a)
         qvals_reshaped = qvals.reshape(self.num_state, self.num_action)
         prob_reshaped = prob.reshape(self.num_state, self.num_action)
-
         # This is a vectorized form of np.diag(prob_reshaped[state]) - np.outer(prob_reshaped[state], prob_reshaped[state])
         if self.policy_type == 'softmax':
             grad_pi = np.eye(self.num_action)[np.newaxis, :, :] * prob_reshaped[:, np.newaxis, :] - prob_reshaped[:, :, np.newaxis] * prob_reshaped[:, np.newaxis, :]
-        elif self.policy_type == 'direct':
-            grad_pi = np.eye(self.num_action)[np.newaxis,:,:]
+        # elif self.policy_type == 'direct':
+        #     grad_pi = np.eye(self.num_action)[np.newaxis,:,:]
         # Compute state_grad for all states
         # Broadcasting is used to vectorize the computation
         state_grads = np.matmul(grad_pi, qvals_reshaped[:,:,np.newaxis])
@@ -49,7 +48,7 @@ class Random_Env():
     def ell(self,qvals,prob):
         qvals_reshaped = qvals.reshape(self.num_state, self.num_action)
         prob_reshaped = prob.reshape(self.num_state, self.num_action)
-
+        # pdb.set_trace()
         # Compute V vector using vectorized operations
         V = np.sum(qvals_reshaped * prob_reshaped, axis=1)
 
@@ -57,13 +56,44 @@ class Random_Env():
         ell = np.dot(V, self.rho)
         return ell
 
+    def project_simplex(self,x):
+        """ Take a vector x (with possible nonnegative entries and non-normalized)
+            and project it onto the unit simplex.
+
+            mask:   do not project these entries
+                    project remaining entries onto lower dimensional simplex
+        """
+
+        xsorted = np.sort(x)[:,::-1]
+        # entries need to sum up to 1 (unit simplex)
+        sum_ = 1.0
+        lambda_a = (np.cumsum(xsorted,axis=1) - sum_) / np.arange(1.0, xsorted.shape[1]+1.0)
+        # pdb.set_trace()
+        p = np.zeros(x.shape)
+        for b_i in range(len(xsorted)):
+            for i in range(len(lambda_a[0])-1):
+                if lambda_a[b_i,i] >= xsorted[b_i,i+1]:
+                    astar = i
+                    break
+            else:
+                astar = -1
+            p[b_i] = np.maximum(x[b_i]-lambda_a[b_i,astar],  0)
+        return p
+
     def theta_to_policy(self,theta,):
         theta_reshaped = theta.reshape((self.num_state, self.num_action))
+        if self.policy_type == 'softmax':
         # Compute the exponential of each element
-        exp_theta = np.exp(theta_reshaped)
-
+            exp_theta = np.exp(theta_reshaped)
+        # elif self.policy_type == 'direct':
+        #     # exp_theta = theta_reshaped
+        #     # # exp_theta = self.project_simplex(theta_reshaped)
+        #     # exp_theta[exp_theta<0] = 0
+        #     exp_theta = 1 / (1 + np.exp(-theta_reshaped))
+            # pdb.set_trace()
         # Normalize each row to get probabilities
         prob = exp_theta / np.sum(exp_theta, axis=1, keepdims=True)
+        # pdb.set_trace()
         # Flatten the array back to 1D if needed
         prob = prob.flatten()
 
@@ -132,8 +162,8 @@ class Random_Env():
         for i in range(len(reward)):
             plt.plot(np.array(reward[i]),label=label[i])
         plt.legend()
-        plt.title('Reward during training')
-        plt.ylabel('Reward')
+        plt.title('Optimal Gap during training')
+        plt.ylabel('Optimal Gap')
         plt.xlabel('Iteration number/{}'.format(record_interval))
         f.savefig("{}/Reward_{}_CMDP.jpg".format(out_dir,method.upper()))
         f.clf()
