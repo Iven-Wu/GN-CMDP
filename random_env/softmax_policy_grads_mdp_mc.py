@@ -59,31 +59,6 @@ def grad(qvals,prob,d_pi):
     grad = np.sum([d_pi[i]*grad_state(qvals,prob,i) for i in range(0,num_state)],axis=0)
     return grad
 
-def grad_new(qvals,prob,d_pi):
-    ### grad is (s,a)
-    qvals_reshaped = qvals.reshape(num_state, num_action)
-    prob_reshaped = prob.reshape(num_state, num_action)
-    # grad_list = []
-    # for state in range(0,num_state):
-    #     ### grad_pi is diag(pi(s)) - pi(s)*pi(s)^T
-    #     grad_pi = np.diag(prob_reshaped[state]) - prob_reshaped[[state]].T @ prob_reshaped[[state]]
-    #     ### state_grad = grad_pi * q(s)
-    #     state_grad_vec = grad_pi @ qvals_reshaped[[state]].T
-    #     grad_list.append(d_pi[state]*state_grad_vec.T)
-    # grad = np.concatenate(grad_list,axis=0)
-
-    # This is a vectorized form of np.diag(prob_reshaped[state]) - np.outer(prob_reshaped[state], prob_reshaped[state])
-    grad_pi = np.eye(num_action)[np.newaxis, :, :] * prob_reshaped[:, np.newaxis, :] - prob_reshaped[:, :, np.newaxis] * prob_reshaped[:, np.newaxis, :]
-    # Compute state_grad for all states
-    # Broadcasting is used to vectorize the computation
-    state_grads = np.matmul(grad_pi, qvals_reshaped[:,:,np.newaxis])
-
-    # Apply d_pi weighting and reshape
-    weighted_state_grads = d_pi[:, np.newaxis, np.newaxis] * state_grads
-    grad = weighted_state_grads.flatten()
-    # Sum over states and squeeze to remove singleton dimension
-    return grad
-
 
 '''
 The overall reward_mat function \ell(\theta). 
@@ -169,20 +144,6 @@ def policy_iter(q_vals,num_state,num_action):
 
 curr_policy = np.random.uniform(0,1,size=(num_state*num_action))
 new_policy = init_policy
-# print('Starting policy',init_policy)
-
-# # ### use policy iteration to find out the optimal one
-# while np.count_nonzero(curr_policy - new_policy) > 0:
-#     curr_policy = new_policy
-#     Pi = get_Pi(curr_policy,num_state,num_action)
-#     mat = np.identity(num_state*num_action) - gamma*np.matmul(prob_transition,Pi)
-#     q_vals = np.dot(np.linalg.inv(mat),reward_mat)
-#     new_policy = policy_iter(q_vals,num_state,num_action)
-    
-# print('Final policy',new_policy)
-
-# ell_star = ell(q_vals,new_policy,rho)
-# print('Optimal reward_mat',ell_star)
 
 def get_action(theta,state):
     # prob = theta_to_policy(theta,num_state,num_action)
@@ -191,18 +152,7 @@ def get_action(theta,state):
     prob = theta_to_policy(theta)
     action = np.random.choice(range(num_action),p=prob[state])
     return action
-    # prob_reshaped = prob[:, :, np.newaxis]
-
-    # # Element-wise multiplication and sum over the action dimension
-    # final_probability_a = np.sum(prob_reshaped * prob_transition, axis=1)
-
-
-    # final_probability = np.zeros((num_state,num_state))
-    # for prev_state in range(num_state):
-    #     for next_state in range(num_state):
-    #         final_probability[prev_state,next_state] = np.sum([prob[prev_state,a]* prob_transition[prev_state,a,next_state] for a in range(num_action)])
     
-    # pdb.set_trace()
 def env_step(state,action):
     # prob = theta_to_policy(theta,num_state,num_action)
     prob_next = prob_transition[state,action]
@@ -298,10 +248,6 @@ for k in tqdm(range(num_iter)):
         # pdb.set_trace()
         theta[state] -= alpha * d_theta.reshape(-1)
     
-    # gradient = grad_new(qvals,prob,d_pi) / (1-gamma)
-    # step = find_step(theta,gradient,alpha,beta)
-    # step = alpha
-    # theta += step*gradient
     if k % record_interval == 0:
         avg_reward = ell_approx(theta)
         gap.append(avg_reward)
