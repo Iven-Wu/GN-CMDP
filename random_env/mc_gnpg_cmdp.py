@@ -10,9 +10,9 @@ from tqdm import tqdm
 ## Random Seed
 np.random.seed(10) 
 ## Problem Setup
-gamma = 0.9
-num_state, num_action = 10, 5
-lam = 0.5
+gamma = 0.8
+num_state, num_action = 20, 10
+lam = 0.
 '''
 Randomly generated probability transition matrix P((s,a) -> s') in R^{|S||A| x |S|}
 Each row sums up to one. P[s,a,s']
@@ -109,24 +109,10 @@ ell_star = ell(q_vals,new_policy,rho)
 print('Optimal reward_mat',ell_star)
 
 def get_action(theta,state):
-    # prob = theta_to_policy(theta,num_state,num_action)
-    # state_trans = np.einsum('ij,ijk->ik',prob,prob_transition)
-    # next_state = np.random.choice(range(num_state),p=state_trans[state])
     prob = theta_to_policy(theta)
     action = np.random.choice(range(num_action),p=prob[state])
     return action
-    # prob_reshaped = prob[:, :, np.newaxis]
 
-    # # Element-wise multiplication and sum over the action dimension
-    # final_probability_a = np.sum(prob_reshaped * prob_transition, axis=1)
-
-
-    # final_probability = np.zeros((num_state,num_state))
-    # for prev_state in range(num_state):
-    #     for next_state in range(num_state):
-    #         final_probability[prev_state,next_state] = np.sum([prob[prev_state,a]* prob_transition[prev_state,a,next_state] for a in range(num_action)])
-    
-    # pdb.set_trace()
 def env_step(state,action):
     # prob = theta_to_policy(theta,num_state,num_action)
     prob_next = prob_transition[state,action]
@@ -195,24 +181,26 @@ def ell_approx(theta):
 '''
 Policy gradient in action
 '''
-num_iter = 300
+num_iter = 1000
 record_interval = 1
 # Parameters for line search
-alpha = 1
-beta = 1
-b = 4
+alpha = 0.2
+beta = 0.2
+b = 3
 
-theta = np.random.uniform(0,1,size=(num_state,num_action)) ### information for policy compute
+# theta = np.random.uniform(0,1,size=(num_state,num_action)) ### information for policy compute
+theta = np.zeros((num_state,num_action))
 gap = []
+violation = []
 start_time = time.time()
-num_traj = 5
+
 for k in tqdm(range(num_iter)):
     ### prob is the probability for the policy
     # prob = theta_to_policy(theta,num_state,num_action)
     # while not done:
     grad_sum = np.zeros_like(theta)
-    for _ in range(num_traj):
-        state = 0
+    for _ in range(num_MC_sims):
+        state = np.random.choice(range(num_state))
         reward_list = []
         action_list = []
         state_list = []
@@ -229,8 +217,6 @@ for k in tqdm(range(num_iter)):
         final_rewards, constrains = compute_returns(reward_list,util_list,gamma)
 
         states = np.array(state_list)
-        # probs = theta_to_policy(theta)[states]
-        # loss = compute_loss(probs,action_list,final_rewards)
         for t, state in enumerate(states):
             probs = theta_to_policy(theta)[state]
             action = action_list[t]
@@ -238,15 +224,17 @@ for k in tqdm(range(num_iter)):
             d_softmax[action] -= 1
             d_theta = np.outer(d_softmax, final_rewards[t]+lam*constrains[t])
             grad_sum[state] += d_theta.reshape(-1)
-        grad_avg = grad_sum/num_traj
-        grad_avg = grad_avg/np.linalg.norm(grad_avg)
-        theta -= alpha * grad_avg
+    grad_avg = grad_sum/num_MC_sims
+    grad_avg = grad_avg/np.linalg.norm(grad_avg)
+    theta -= alpha * grad_avg
     # pdb.set_trace()
     lam = np.maximum( lam-beta*(constrains[0]-b).mean() ,0)
 
     if k % record_interval == 0:
         avg_reward,avg_constrain = ell_approx(theta)
         gap.append(ell_star-avg_reward)
+        violation.append(b-avg_constrain)
+
 
 
 ## Saving the 'Optmality gap array'. This can be loaded to make the figure again.
@@ -255,4 +243,11 @@ plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_GNPG_CMDP.jpg")
+f.savefig("figs/MC_GNPG_CMDP_reward.jpg")
+
+f = plt.figure()
+plt.plot(np.array(violation))
+plt.title('Optimality gap during violation')
+plt.ylabel('Violation')
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("figs/MC_GNPG_CMDP_violation.jpg")

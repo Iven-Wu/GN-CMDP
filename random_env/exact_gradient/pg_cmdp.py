@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     ell_star = rm_env.get_optimum()
 
-    num_iter = 2000
+    num_iter =  2000
     record_interval = 1
     # alpha is the lr for theta
     alpha = 0.2
@@ -50,7 +50,8 @@ if __name__ == '__main__':
             gradient = agent.compute_grad(prob,qvals,q_constrain_vals)
             agent.theta += alpha*gradient
             ### constrain_violation
-            violation = q_constrain_vals - constrain_threshold
+            V_constrain_vals = (np.sum((q_constrain_vals * prob).reshape((num_state,num_action)),axis=1) * rm_env.rho).sum()
+            violation = V_constrain_vals - constrain_threshold
             '''
             have problems
             '''

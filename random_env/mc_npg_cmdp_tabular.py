@@ -10,9 +10,9 @@ from tqdm import tqdm
 ## Random Seed
 np.random.seed(10) 
 ## Problem Setup
-gamma = 0.9
-num_state, num_action = 10, 5
-lam = 0.5
+gamma = 0.8
+num_state, num_action =  10,5
+lam = 0
 '''
 Randomly generated probability transition matrix P((s,a) -> s') in R^{|S||A| x |S|}
 Each row sums up to one. P[s,a,s']
@@ -149,10 +149,12 @@ def compute_loss(probs, episode_actions, returns):
 
     return loss
 
-num_MC_sims = 100
-horizon = 20
+num_MC_sims = 25
+horizon = 15
 b = 4.
 def ell_approx(theta):
+    V_r_rho, V_g_rho = 0,0
+    # for _ in range(num_MC_sims):
     init_states = np.stack([np.random.choice(range(len(rho)),p=rho) for _ in range(num_MC_sims)])
     states = init_states
     cum_rewards = 0
@@ -174,8 +176,8 @@ num_iter = 300
 record_interval = 1
 stepsize = 0.01
 # Parameters for line search
-alpha = 1
-beta = 1
+alpha = 0.1
+beta = 0.2
 b = 4
 # horizon = 20
 theta = np.random.uniform(0,1,size=(num_state,num_action)) ### information for policy compute
@@ -239,7 +241,7 @@ for k in tqdm(range(num_iter)):
         states = next_states
     V_g_rho = cum_constrains.mean()
     ### update with gradient
-    theta -= alpha*advantage_mat/(1-gamma)
+    theta += alpha*advantage_mat/(1-gamma)
     theta = theta_to_policy(theta)
     # pdb.set_trace()
     lam = np.maximum(lam-beta*(V_g_rho-b),0)

@@ -33,8 +33,8 @@ class Random_Env():
         # This is a vectorized form of np.diag(prob_reshaped[state]) - np.outer(prob_reshaped[state], prob_reshaped[state])
         if self.policy_type == 'softmax':
             grad_pi = np.eye(self.num_action)[np.newaxis, :, :] * prob_reshaped[:, np.newaxis, :] - prob_reshaped[:, :, np.newaxis] * prob_reshaped[:, np.newaxis, :]
-        # elif self.policy_type == 'direct':
-        #     grad_pi = np.eye(self.num_action)[np.newaxis,:,:]
+        elif self.policy_type == 'direct':
+            grad_pi = np.eye(self.num_action)[np.newaxis,:,:]
         # Compute state_grad for all states
         # Broadcasting is used to vectorize the computation
         state_grads = np.matmul(grad_pi, qvals_reshaped[:,:,np.newaxis])
@@ -85,11 +85,11 @@ class Random_Env():
         if self.policy_type == 'softmax':
         # Compute the exponential of each element
             exp_theta = np.exp(theta_reshaped)
-        # elif self.policy_type == 'direct':
-        #     # exp_theta = theta_reshaped
-        #     # # exp_theta = self.project_simplex(theta_reshaped)
-        #     # exp_theta[exp_theta<0] = 0
-        #     exp_theta = 1 / (1 + np.exp(-theta_reshaped))
+        elif self.policy_type == 'direct':
+            # exp_theta = theta_reshaped
+            exp_theta = self.project_simplex(theta_reshaped)
+            # exp_theta[exp_theta<0] = 0
+            # exp_theta = 1 / (1 + np.exp(-theta_reshaped))
             # pdb.set_trace()
         # Normalize each row to get probabilities
         prob = exp_theta / np.sum(exp_theta, axis=1, keepdims=True)

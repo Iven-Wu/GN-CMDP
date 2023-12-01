@@ -37,8 +37,8 @@ class Agent(Random_Env):
         for s in range(self.num_state):
             start = s*self.num_action
             end = (s+1)*self.num_action
-            FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
-
+            # FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
+            FIM[start:end,start:end] = np.eye(len(prob_reshaped[s])) - prob_reshaped[s][np.newaxis]
 
         # FIM = np.zeros((self.num_action,self.num_action))
         # for s in range(self.num_state):
@@ -71,6 +71,14 @@ class Agent(Random_Env):
             # pdb.set_trace()
             FIM = self.compute_fisher_information_matrix(prob)
             gradient= self.compute_natural_gradient(gradient_raw,FIM)
+
+            # qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
+            # prob_reshaped = prob.reshape((self.num_state,self.num_action))
+            # values = np.sum(qvals_reshaped*prob_reshaped,axis=1,keepdims=True)
+            # advantage = qvals_reshaped - values
+            # # pdb.set_trace()
+            # gradient = advantage.flatten()/(1-self.gamma)
+
 
             # qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
             # prob_reshaped = prob.reshape((self.num_state,self.num_action))
