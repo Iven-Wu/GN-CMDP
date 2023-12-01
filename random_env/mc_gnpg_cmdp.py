@@ -10,7 +10,7 @@ from tqdm import tqdm
 ## Random Seed
 np.random.seed(10) 
 ## Problem Setup
-gamma = 0.8
+gamma = 0.9
 num_state, num_action = 20, 10
 lam = 0.
 '''
@@ -186,7 +186,7 @@ record_interval = 1
 # Parameters for line search
 alpha = 0.2
 beta = 0.2
-b = 3
+b = 4
 
 # theta = np.random.uniform(0,1,size=(num_state,num_action)) ### information for policy compute
 theta = np.zeros((num_state,num_action))

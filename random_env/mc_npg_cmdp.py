@@ -30,8 +30,10 @@ gamma = 0.8
 
 rho = np.ones(num_state)/num_state
 
-num_iter = 300
+num_iter = 1000
 num_episodes = 50
+
+alpha = beta = 1
 
 def get_Pi(prob):
     #print(prob)
@@ -67,7 +69,7 @@ print('Starting policy',init_policy)
 ### use policy iteration to find out the optimal one
 while np.count_nonzero(curr_policy.flatten() - new_policy.flatten()) > 0:
     curr_policy = new_policy
-    print(curr_policy)
+    # print(curr_policy)
 
     Pi = get_Pi(curr_policy)
     mat = np.identity(num_state) - gamma*Pi
@@ -89,7 +91,7 @@ def theta_to_policy(theta):
     # pdb.set_trace()
     theta_reshaped = theta.reshape((num_state, num_action))
     # Compute the exponential of each element
-    print(theta_reshaped)
+    # print(theta_reshaped)
     exp_theta = np.exp(theta_reshaped)
     # Normalize each row to get probabilities
     prob = exp_theta / np.sum(exp_theta, axis=1, keepdims=True)
@@ -109,9 +111,10 @@ def env_step(state,action):
 
 lam = 0
 theta = np.zeros((num_state,num_action))
+record_interval = 1
 value_list = []
 gap = []
-violation_list = []
+violation = []
 for t in tqdm(range(num_iter)):
     values = np.zeros(num_state)
     qvals = np.zeros((num_state,num_action))
@@ -121,17 +124,16 @@ for t in tqdm(range(num_iter)):
     advantage = qvals - values[:, np.newaxis]
     values_g = np.zeros(num_state)
     prob = theta_to_policy(theta)
-
     for episode in range(num_episodes):
         values_temp = np.zeros(num_state)
         qvals_temp = np.zeros((num_state,num_action))
-
         for s in range(num_state):
             next_state_v = s
             next_state_q = s
             for i in range(np.random.geometric(1-gamma)):
                 action = get_action(prob,next_state_v)
                 next_state_v, reward, utility = env_step(next_state_v, action)
+
                 values_temp[s] += (reward + lam*utility)
 
             for a in range(num_action):
@@ -140,7 +142,6 @@ for t in tqdm(range(num_iter)):
                     qvals_temp[s,a] += r[next_state_q, next_action] + lam*g[next_state_q, next_action]
                     next_state_q, reward, utility = env_step(next_state_q, next_action)
                     next_action = get_action(prob,next_state_q)
-
         values += 1.0/num_episodes*values_temp
         qvals += 1.0/num_episodes*qvals_temp
 
@@ -159,8 +160,11 @@ for t in tqdm(range(num_iter)):
         values_g += 1.0/num_episodes*values_g_temp
 
     advantage = qvals - values[:, np.newaxis]
-    theta = theta + (1.0/(1-gamma))*advantage
-    lam = max(lam-1.0*values_g)
+    theta = theta + (alpha/(1-gamma))*advantage
+    # theta += alpha * advantage/(1-gamma)
+    # lam = np.maximum(lam-1.0*values_g,0)
+    # pdb.set_trace()
+    lam = np.maximum(lam-beta*(np.sum(values_g*rho)-b),0 )
 
     pi_reshaped = prob[:, :, np.newaxis]  # Reshape to (num_state, num_action, 1)
 
@@ -169,13 +173,22 @@ for t in tqdm(range(num_iter)):
     mat = np.identity(num_state) - gamma*P_pi
     R_pi = np.sum(r * prob, axis=1)
     avg_reward = ell(np.dot(np.linalg.inv(mat),R_pi), rho)
-
-    gap.append(ell_star - avg_reward)
+    if t % record_interval == 0:
+        gap.append(ell_star - avg_reward)
+        violation.append(b-values_g)
 
 f = plt.figure()
 plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
-plt.xlabel('Iteration number/{}'.format(1))
-f.savefig("figs/Fig_Sample_based_NPG_CMDP.jpg")
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("figs/Sample_based_NPG_CMDP_reward.jpg")
+f.clf()
+
+f = plt.figure()
+plt.plot(np.array(violation))
+plt.title('Violation during training')
+plt.ylabel('Violation')
+plt.xlabel('Iteration number/{}'.format(record_interval))
+f.savefig("figs/Sample_based_NPG_CMDP_violation.jpg")
 f.clf()
