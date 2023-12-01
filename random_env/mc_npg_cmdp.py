@@ -33,13 +33,8 @@ rho = np.ones(num_state)/num_state
 alpha = 0.2
 beta = 0.1
 
-<<<<<<< HEAD
-num_iter = 300
-num_episodes = 100
-=======
 num_iter = 20
 num_episodes = 50
->>>>>>> dddddd74ad406398f640a42a8b6924d2406468ca
 
 def theta_to_policy(theta):
     # pdb.set_trace()
