@@ -33,8 +33,8 @@ rho = np.ones(num_state)/num_state
 alpha = 0.2
 beta = 0.1
 
-num_iter = 1000
-num_episodes = 100
+num_iter = 20
+num_episodes = 50
 
 def theta_to_policy(theta):
     # pdb.set_trace()
@@ -61,9 +61,10 @@ def env_step(state,action):
     utility = g[state,action]
     return next_state,reward,utility
 
+lam = 0
+theta = np.zeros((num_state,num_action))
+value_list = []
 for t in tqdm(range(num_iter)):
-    lam = 0
-    theta = np.zeros((num_state,num_action))
     values = np.zeros(num_state)
     qvals = np.zeros((num_state,num_action))
 
@@ -75,7 +76,7 @@ for t in tqdm(range(num_iter)):
             for i in range(np.random.geometric(1-gamma)):
                 action = get_action(theta,next_state)
                 next_state, reward, utility = env_step(next_state, action)
-                values_temp[s] += reward + lam*utility
+                values_temp[s] += (reward + lam*utility)
 
         for s in range(num_state):
             next_state = s
@@ -89,8 +90,7 @@ for t in tqdm(range(num_iter)):
         values += 1.0/num_episodes*values_temp
         qvals += 1.0/num_episodes*qvals_temp
 
-    a = qvals - values[:, np.newaxis]
-
+    advantage = qvals - values[:, np.newaxis]
     values_g = np.zeros(num_state)
 
     for episode in range(num_episodes):
@@ -107,5 +107,24 @@ for t in tqdm(range(num_iter)):
         
         values_g += 1.0/num_episodes*values_g_temp
 
-    theta = theta + 1.0/(1-gamma)*a
-    lam = np.maximum(lam-1.0*values_g,0)
+    theta = theta + (1.0/(1-gamma))*advantage
+    lam = max(lam-1.0*values_g)
+
+    pi = theta_to_policy(theta)
+    pi_reshaped = pi[:, :, np.newaxis]  # Reshape to (num_state, num_action, 1)
+
+    # Element-wise multiplication of transition probabilities and reshaped policy
+    P_pi = np.sum(prob_transition * pi_reshaped, axis=1)  # Sum along the action axis to get P_pi
+    mat = np.identity(num_state) - gamma*P_pi
+    R_pi = np.sum(r * pi, axis=1)
+    value_list.append(np.dot(np.linalg.inv(mat),R_pi).mean())
+
+print(value_list)
+f = plt.figure()
+plt.plot(np.array(value_list))
+plt.title('Value during training')
+plt.ylabel('Value')
+plt.xlabel('Iteration number/{}'.format(1))
+f.savefig("figs/Fig_sample_based_npg_CMDP.jpg")
+f.clf()
+
