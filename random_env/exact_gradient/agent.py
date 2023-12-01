@@ -5,8 +5,8 @@ from env import Random_Env
 
 
 class Agent(Random_Env):
-    def __init__(self,num_state=10,num_action=5,type='pg',policy_type='softmax'):
-        super().__init__(num_state,num_action,policy_type)
+    def __init__(self,num_state=10,num_action=5,type='pg',policy_type='softmax',gamma=0.9):
+        super().__init__(num_state,num_action,policy_type,gamma=gamma)
         self.num_state, self.num_action = num_state, num_action
         self.theta = np.random.uniform(0,1,size=num_state*num_action)
         self.lam = 0.5

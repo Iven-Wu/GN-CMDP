@@ -14,18 +14,16 @@ from tqdm import tqdm
 
 
 if __name__ == '__main__':
-    num_state = 10
-    num_action = 5
+    num_state = 20
+    num_action = 10
+    gamma = 0.8
     np.random.seed(10) 
     policy_type = 'softmax'
-    rm_env = Random_Env(num_state=num_state,num_action=num_action,gamma=0.9,policy_type=policy_type)
-    num_state = rm_env.num_state
-    num_action = rm_env.num_action
-    gamma = rm_env.gamma
+    rm_env = Random_Env(num_state=num_state,num_action=num_action,gamma=gamma,policy_type=policy_type)
 
-    PG_agent = Agent(num_state=num_state,num_action=num_action,type='pg',policy_type=policy_type)
-    NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg',policy_type=policy_type)
-    GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg',policy_type=policy_type)
+    PG_agent = Agent(num_state=num_state,num_action=num_action,type='pg',policy_type=policy_type,gamma=gamma)
+    NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg',policy_type=policy_type,gamma=gamma)
+    GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg',policy_type=policy_type,gamma=gamma)
 
     ell_star = rm_env.get_optimum()
 
@@ -34,8 +32,8 @@ if __name__ == '__main__':
     # alpha is the lr for theta
     alpha = 0.2
     # beta is the lr for lamda
-    beta = 0.1
-    constrain_threshold = 5.
+    beta = 0.2
+    constrain_threshold = 3.
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 
@@ -53,7 +51,10 @@ if __name__ == '__main__':
             agent.theta += alpha*gradient
             ### constrain_violation
             violation = q_constrain_vals - constrain_threshold
-            agent.lam = np.maximum(agent.lam-beta*violation,0)
+            '''
+            have problems
+            '''
+            agent.lam = np.maximum(agent.lam-(beta*violation).mean(),0)
 
             avg_reward = rm_env.ell(qvals,prob)
             agent.reward_list.append(ell_star-avg_reward)

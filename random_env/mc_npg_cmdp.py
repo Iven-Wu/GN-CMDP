@@ -33,7 +33,7 @@ rho = np.ones(num_state)/num_state
 alpha = 0.2
 beta = 0.1
 
-num_iter = 1000
+num_iter = 300
 num_episodes = 100
 
 def theta_to_policy(theta):
@@ -109,3 +109,5 @@ for t in tqdm(range(num_iter)):
 
     theta = theta + 1.0/(1-gamma)*a
     lam = np.maximum(lam-1.0*values_g,0)
+
+    

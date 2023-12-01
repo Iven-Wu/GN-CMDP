@@ -13,22 +13,22 @@ from agent import Agent
 
 if __name__ == '__main__':
     np.random.seed(10) 
-    rm_env = Random_Env(num_state=10,num_action=5)
+    rm_env = Random_Env(num_state=20,num_action=10,gamma=0.8)
     num_state = rm_env.num_state
     num_action = rm_env.num_action
     gamma = rm_env.gamma
 
-    PG_agent = Agent(type='pg')
-    NPG_agent = Agent(type='npg')
-    GNPG_agent = Agent(type='gnpg')
+    PG_agent = Agent(type='pg',gamma=gamma)
+    NPG_agent = Agent(type='npg',gamma=gamma)
+    GNPG_agent = Agent(type='gnpg',gamma=gamma)
 
     num_iter = 1000
     record_interval = 1
     # alpha is the lr for theta
-    alpha = 0.2
+    alpha = 1
     # beta is the lr for lamda
-    beta = 0.1
-    constrain_threshold = 4.
+    beta = 1
+    constrain_threshold = 3.
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 

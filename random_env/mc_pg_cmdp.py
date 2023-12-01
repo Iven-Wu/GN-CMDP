@@ -167,6 +167,7 @@ num_MC_sims = 50
 horizon = 20
 def ell_approx(theta):
     total_reward = 0
+    total_constrain = 0
     for sim_i in range(num_MC_sims):
         state = 0
         reward_list = []
@@ -184,67 +185,67 @@ def ell_approx(theta):
             state = next_state
         final_rewards,constrains = compute_returns(reward_list,util_list,gamma)
 
-        total_reward += final_rewards[0] + lam*constrains[0]
+        total_reward += final_rewards[0] 
+        total_constrain += constrains[0]
     avg_reward = total_reward/num_MC_sims
+    avg_constrain = total_constrain/num_MC_sims
 
-    return avg_reward
+    return avg_reward,avg_constrain
 
 '''
 Policy gradient in action
 '''
 num_iter = 1000
 record_interval = 1
-stepsize = 0.01
 # Parameters for line search
-alpha = 0.2
-beta = 0.1
+alpha = 1
+beta = 1
 b = 4
-# horizon = 20
+
 theta = np.random.uniform(0,1,size=(num_state,num_action)) ### information for policy compute
 gap = []
 start_time = time.time()
+num_traj = 5
 for k in tqdm(range(num_iter)):
     ### prob is the probability for the policy
     # prob = theta_to_policy(theta,num_state,num_action)
     # while not done:
-    state = 0
-    reward_list = []
-    action_list = []
-    state_list = []
-    util_list = []
-    for i in range(horizon):
-        action = get_action(theta,state)
-        next_state, reward,utility = env_step(state,action)
-        state_list.append(state)
-        action_list.append(action)
-        reward_list.append(reward)
-        util_list.append(utility)
+    grad_sum = np.zeros_like(theta)
+    for _ in range(num_traj):
+        state = 0
+        reward_list = []
+        action_list = []
+        state_list = []
+        util_list = []
+        for i in range(horizon):
+            action = get_action(theta,state)
+            next_state, reward,utility = env_step(state,action)
+            state_list.append(state)
+            action_list.append(action)
+            reward_list.append(reward)
+            util_list.append(utility)
 
-        state = next_state
-    final_rewards, constrains = compute_returns(reward_list,util_list,gamma)
+            state = next_state
+        final_rewards, constrains = compute_returns(reward_list,util_list,gamma)
 
-    states = np.array(state_list)
-    # probs = theta_to_policy(theta)[states]
-    # loss = compute_loss(probs,action_list,final_rewards)
-    for t, state in enumerate(states):
-        probs = theta_to_policy(theta)[state]
-        action = action_list[t]
-        d_softmax = probs.copy()
-        d_softmax[action] -= 1
-        d_theta = np.outer(d_softmax, final_rewards[t]+lam*constrains[t])
-        # pdb.set_trace()
-        theta[state] += alpha * d_theta.reshape(-1)
+        states = np.array(state_list)
+        # probs = theta_to_policy(theta)[states]
+        # loss = compute_loss(probs,action_list,final_rewards)
+        for t, state in enumerate(states):
+            probs = theta_to_policy(theta)[state]
+            action = action_list[t]
+            d_softmax = probs.copy()
+            d_softmax[action] -= 1
+            d_theta = np.outer(d_softmax, final_rewards[t]+lam*constrains[t])
+            grad_sum[state] += d_theta.reshape(-1)
+        grad_avg = grad_sum/num_traj
+        # grad_avg = grad_avg/np.linalg.norm(grad_avg)
+        theta -= alpha * grad_avg
     # pdb.set_trace()
     lam = np.maximum( lam-beta*(constrains[0]-b).mean() ,0)
-    # print(lam)
 
-    
-    # gradient = grad_new(qvals,prob,d_pi) / (1-gamma)
-    # step = find_step(theta,gradient,alpha,beta)
-    # step = alpha
-    # theta += step*gradient
     if k % record_interval == 0:
-        avg_reward = ell_approx(theta)
+        avg_reward,avg_constrain = ell_approx(theta)
         gap.append(ell_star-avg_reward)
 
 
@@ -254,4 +255,4 @@ plt.plot(np.array(gap))
 plt.title('Optimality gap during training')
 plt.ylabel('Gap')
 plt.xlabel('Iteration number/{}'.format(record_interval))
-f.savefig("figs/Fig_Policy_CMDP.jpg")
+f.savefig("figs/Fig_PG_CMDP.jpg")
