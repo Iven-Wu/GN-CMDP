@@ -132,60 +132,85 @@ class MC_Env():
         new_policy = new_policy.flatten()
         return new_policy
     
-    def get_action(self,theta,state):
-        prob = self.theta_to_policy(theta)
-        action = np.random.choice(range(self.num_action),p=prob[state])
-        return action
+    # def get_action(self,theta,state):
+    #     prob = self.theta_to_policy(theta)
+    #     action = np.random.choice(range(self.num_action),p=prob[state])
+    #     return action
 
-    def env_step(self,state,action):
+    def get_action(self,theta,state):
+        # pdb.set_trace()
+        print('start')
+        start_time = time.time()
+        raw_prob = self.theta_to_policy(theta)
+        probs = raw_prob[state]
+        actions = np.stack([np.random.choice(range(self.num_action),p=prob) for prob in probs])
+        
+        print(time.time()-start_time)
+        return actions
+
+    # def env_step(self,state,action):
+    #     # prob = theta_to_policy(theta,num_state,num_action)
+    #     # pdb.set_trace()
+    #     prob_next = self.prob_transition[state,action]
+    #     next_state = np.random.choice(list(range(self.num_state)),p=prob_next)
+    #     reward = self.reward_mat[state,action]
+    #     utility = self.constrain_mat[state,action]
+    #     return next_state,reward,utility
+
+    def env_step(self,states,actions):
         # prob = theta_to_policy(theta,num_state,num_action)
         # pdb.set_trace()
-        prob_next = self.prob_transition[state,action]
-        next_state = np.random.choice(list(range(self.num_state)),p=prob_next)
-        reward = self.reward_mat[state,action]
-        utility = self.constrain_mat[state,action]
-        return next_state,reward,utility
-
-    def compute_returns(self,rewards, utility_list):
-        returns = []
-        G = 0
-        for reward in reversed(rewards):
-            G = reward + self.gamma * G
-            returns.insert(0, G)
-        constrains = []
-        U = 0
-        for utility in reversed(utility_list):
-            U = utility + self.gamma * U
-            constrains.insert(0, U)
-        return returns, constrains
-
+        probs_next = self.prob_transition[states,actions]
+        # pdb.set_trace()
+        next_states = np.stack([np.random.choice(range(self.num_state),p=prob_next) for prob_next in probs_next] )
+        rewards = self.reward_mat[states,actions]
+        utilities = self.constrain_mat[states,actions]
+        return next_states,rewards,utilities
+    
     def ell_approx(self,theta,num_MC_sims,horizon):
-        total_reward = 0
-        total_constrain = 0
-        for sim_i in range(num_MC_sims):
-            # state = 0
-            state = np.random.choice(range(self.num_state))
-            reward_list = []
-            action_list = []
-            state_list = []
-            util_list = []
-            for i in range(horizon):
-                action = self.get_action(theta,state)
-                next_state, reward, utility = self.env_step(state,action)
-                state_list.append(state)
-                action_list.append(action)
-                reward_list.append(reward)
-                util_list.append(utility)
+        V_r_rho, V_g_rho = 0,0
+        # for _ in range(num_MC_sims):
+        init_states = np.stack([np.random.choice(range(len(self.rho)),p=self.rho) for _ in range(num_MC_sims)])
+        states = init_states
+        cum_rewards = 0
+        cum_constrains = 0
+        for i in range(horizon):
+            actions = self.get_action(theta,states)
+            next_states, rewards, utilities = self.env_step(states,actions)
+            cum_rewards = self.gamma*cum_rewards + rewards
+            cum_constrains = self.gamma*cum_constrains + utilities
+            states = next_states
+        V_r_rho = cum_rewards.mean()
+        V_g_rho = cum_constrains.mean()
+        return V_r_rho,V_g_rho
 
-                state = next_state
-            final_rewards,constrains = self.compute_returns(reward_list,util_list)
+    # def ell_approx(self,theta,num_MC_sims,horizon):
+    #     total_reward = 0
+    #     total_constrain = 0
+    #     for sim_i in range(num_MC_sims):
+    #         # state = 0
+    #         state = np.random.choice(range(self.num_state))
+    #         reward_list = []
+    #         action_list = []
+    #         state_list = []
+    #         util_list = []
+    #         for i in range(horizon):
+    #             action = self.get_action(theta,state)
+    #             next_state, reward, utility = self.env_step(state,action)
+    #             state_list.append(state)
+    #             action_list.append(action)
+    #             reward_list.append(reward)
+    #             util_list.append(utility)
 
-            total_reward += final_rewards[0] 
-            total_constrain += constrains[0]
-        avg_reward = total_reward/num_MC_sims
-        avg_constrain = total_constrain/num_MC_sims
+    #             state = next_state
+    #         final_rewards,constrains = self.compute_returns(reward_list,util_list)
 
-        return avg_reward,avg_constrain
+    #         total_reward += final_rewards[0] 
+    #         total_constrain += constrains[0]
+    #     avg_reward = total_reward/num_MC_sims
+    #     avg_constrain = total_constrain/num_MC_sims
+
+    #     return avg_reward,avg_constrain
 
     def get_optimum(self,):
         raw_vec = np.random.uniform(0,1,size=(self.num_state,self.num_action))

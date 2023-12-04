@@ -12,7 +12,7 @@ from tqdm import tqdm
 np.random.seed(10) 
 ## Problem Setup
 
-num_state, num_action = 20, 10
+num_state, num_action = 20,10
 
 raw_transition = np.random.uniform(0,1,size=(num_state*num_action,num_state))
 prob_transition = raw_transition/raw_transition.sum(axis=1,keepdims=1)
@@ -30,10 +30,10 @@ gamma = 0.8
 
 rho = np.ones(num_state)/num_state
 
-num_iter = 1000
+num_iter = 300
 num_episodes = 50
 
-alpha = beta = 1
+alpha = beta = 0.2
 
 def get_Pi(prob):
     #print(prob)
@@ -144,7 +144,6 @@ for t in tqdm(range(num_iter)):
                     next_action = get_action(prob,next_state_q)
         values += 1.0/num_episodes*values_temp
         qvals += 1.0/num_episodes*qvals_temp
-
 
         s_vg = np.random.choice(np.arange(num_state), p=rho)
         a_vg = get_action(prob,s_vg)

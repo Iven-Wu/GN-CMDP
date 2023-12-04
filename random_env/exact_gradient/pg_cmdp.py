@@ -16,7 +16,7 @@ from tqdm import tqdm
 if __name__ == '__main__':
     num_state = 20
     num_action = 10
-    gamma = 0.8
+    gamma = 0.9
     np.random.seed(10) 
     policy_type = 'softmax'
     rm_env = Random_Env(num_state=num_state,num_action=num_action,gamma=gamma,policy_type=policy_type)
@@ -27,19 +27,19 @@ if __name__ == '__main__':
 
     ell_star = rm_env.get_optimum()
 
-    num_iter =  2000
+    num_iter = 1000
     record_interval = 1
     # alpha is the lr for theta
-    alpha = 0.2
+    alpha = 1
     # beta is the lr for lamda
-    beta = 0.2
-    constrain_threshold = 3.
+    beta = 1
+    constrain_threshold = 5.
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 
     start_time = time.time()
     agent_list = [PG_agent,NPG_agent,GNPG_agent]
-    # agent_list = [NPG_agent]
+    # agent_list = [GNPG_agent]
     for agent in agent_list:
         for k in tqdm(range(num_iter)):
             ### prob is the probability for the policy

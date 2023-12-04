@@ -38,7 +38,7 @@ class Agent(Random_Env):
             start = s*self.num_action
             end = (s+1)*self.num_action
             # FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
-            FIM[start:end,start:end] = np.eye(len(prob_reshaped[s])) - prob_reshaped[s][np.newaxis]
+            FIM[start:end,start:end] = np.eye(len(prob_reshaped[s])) - prob_reshaped[s][np.newaxis].T
 
         # FIM = np.zeros((self.num_action,self.num_action))
         # for s in range(self.num_state):
@@ -69,15 +69,15 @@ class Agent(Random_Env):
             gradient = gradient_raw
         elif self.type == 'npg':
             # pdb.set_trace()
-            FIM = self.compute_fisher_information_matrix(prob)
-            gradient= self.compute_natural_gradient(gradient_raw,FIM)
+            # FIM = self.compute_fisher_information_matrix(prob)
+            # gradient= self.compute_natural_gradient(gradient_raw,FIM)
 
-            # qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
-            # prob_reshaped = prob.reshape((self.num_state,self.num_action))
-            # values = np.sum(qvals_reshaped*prob_reshaped,axis=1,keepdims=True)
-            # advantage = qvals_reshaped - values
-            # # pdb.set_trace()
-            # gradient = advantage.flatten()/(1-self.gamma)
+            qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
+            prob_reshaped = prob.reshape((self.num_state,self.num_action))
+            values = np.sum(qvals_reshaped*prob_reshaped,axis=1,keepdims=True)
+            advantage = qvals_reshaped - values
+            # pdb.set_trace()
+            gradient = advantage.flatten()/(1-self.gamma)
 
 
             # qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
@@ -89,7 +89,13 @@ class Agent(Random_Env):
             # gradient = gradient.flatten()
             # pdb.set_trace()
         elif self.type == 'gnpg':
-            gradient = gradient_raw/np.linalg.norm(gradient_raw)
+            gradient_reshaped = gradient_raw.reshape((self.num_state,self.num_action))
+            gradient_reshaped = gradient_reshaped/np.linalg.norm(gradient_reshaped,axis=1,keepdims=True)
+            gradient = gradient_reshaped.flatten()
+            
+            # gradient = gradient_raw/np.linalg.norm(gradient_raw)
+            # pdb.set_trace()
+            # gradient = gradient_q/np.linalg.norm(gradient_q) + self.lam * gradient_cons_q/np.linalg.norm(gradient_cons_q)
         
         return gradient
 
