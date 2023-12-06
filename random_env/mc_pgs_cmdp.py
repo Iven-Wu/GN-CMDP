@@ -70,8 +70,10 @@ if __name__ == '__main__':
             ### compute gradient
             d_softmax = mc_env.theta_to_policy(theta)[states].copy()
             d_softmax[actions] -= 1
-            cum_rewards = rewards + gamma * cum_rewards
-            cum_constrains = utilities + gamma * cum_constrains
+            # cum_rewards = rewards + gamma * cum_rewards
+            cum_rewards = cum_rewards + gamma**i * rewards
+            # cum_constrains = utilities + gamma * cum_constrains
+            cum_constrains = cum_constrains + gamma**i * utilities
 
             final_rewards=  cum_rewards+lam*cum_constrains
             d_theta = d_softmax * final_rewards.reshape(-1,1)

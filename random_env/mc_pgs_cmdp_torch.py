@@ -39,8 +39,8 @@ if __name__ == '__main__':
     beta = 0.1
     b = 4.
 
-    # theta = torch.rand(num_state, num_action).to(device)
-    theta = torch.zeros(num_state,num_action).to(device)
+    theta = torch.rand(num_state, num_action).to(device)
+    # theta = torch.zeros(num_state,num_action).to(device)
     # theta = np.zeros((num_state,num_action))
     gnpg_gap = []
     gnpg_violation = []
@@ -52,24 +52,46 @@ if __name__ == '__main__':
         cum_constrains = torch.zeros(num_MC_sims).to(device)  # Replace np.zeros
         states = torch.randint(0, num_state, (num_MC_sims,)).to(device) 
 
+        rewards_list = []
+        constrains_list = []
+        actions_list = []
+        states_list = []
         for i in range(horizon):
             actions = mc_env.get_action(theta,states)
 
             next_states, rewards,utilities = mc_env.env_step(states,actions)
 
             ### compute gradient
-            d_softmax = mc_env.theta_to_policy(theta)[states].clone()
-            d_softmax[actions] -= 1
-            cum_rewards = rewards + gamma * cum_rewards
-            cum_constrains = utilities + gamma * cum_constrains
+            # d_softmax = mc_env.theta_to_policy(theta)[states].clone()
+            # d_softmax[np.arange(num_MC_sims),actions] -= 1
+            # # cum_rewards = rewards + gamma * cum_rewards
+            # cum_rewards = cum_rewards + gamma**i *rewards
+            # # cum_constrains = utilities + gamma * cum_constrains
+            # cum_constrains = cum_constrains + gamma ** i * utilities
 
-            final_rewards=  cum_rewards+lam*cum_constrains
-            d_theta = d_softmax * final_rewards.reshape(-1,1)
-            grad_sum[states] += torch.mean(d_theta,dim=0)
+            # final_rewards=  cum_rewards+lam*cum_constrains
+            # d_theta = d_softmax * final_rewards.reshape(-1,1)
+            # grad_sum[states] += torch.mean(d_theta,dim=0)
+
+            states_list.append(states)
+            actions_list.append(actions)
+            rewards_list.append(rewards)
+            constrains_list.append(utilities)
             ### next state
             states = next_states
 
+        cum_returns_list = mc_env.compute_returns(rewards_list,constrains_list,lam)
+
+        for i in range(horizon):
+            states = states_list[i]
+            actions = actions_list[i]
+            d_softmax = mc_env.theta_to_policy(theta)[states].clone()
+            d_softmax[np.arange(num_MC_sims),actions] -= 1
+            d_theta = d_softmax * cum_returns_list[i].unsqueeze(-1)
+            grad_sum[states] += torch.mean(d_theta,dim=0)
+
         grad = grad_sum / torch.norm(grad_sum)
+        # grad[theta<-50] = 0
         theta -= alpha * grad
         lam = torch.maximum(lam - beta * (cum_constrains.mean() - b).mean(), torch.tensor(0.0).to(device))
 
@@ -79,8 +101,8 @@ if __name__ == '__main__':
             gnpg_violation.append((b-avg_constrain).item())
 
 
-    # theta = torch.rand(num_state, num_action).to(device)
-    theta = torch.zeros(num_state,num_action).to(device)
+    theta = torch.rand(num_state, num_action).to(device)
+    # theta = torch.zeros(num_state,num_action).to(device)
     lam = 0.0
     pg_gap = []
     pg_violation = []
@@ -90,25 +112,50 @@ if __name__ == '__main__':
         cum_rewards = torch.zeros(num_MC_sims).to(device)  # Replace np.zeros
         cum_constrains = torch.zeros(num_MC_sims).to(device)  # Replace np.zeros
         states = torch.randint(0, num_state, (num_MC_sims,)).to(device)
+
+        rewards_list = []
+        constrains_list = []
+        actions_list = []
+        states_list = []
         for i in range(horizon):
             actions = mc_env.get_action(theta,states)
 
             next_states, rewards,utilities = mc_env.env_step(states,actions)
             ### compute gradient
-            d_softmax = mc_env.theta_to_policy(theta)[states].clone()
-            d_softmax[actions] -= 1
-            cum_rewards = rewards + gamma * cum_rewards
-            cum_constrains = utilities + gamma * cum_constrains
+            # d_softmax = mc_env.theta_to_policy(theta)[states].clone()
+            # # pdb.set_trace()
+            # d_softmax[np.arange(num_MC_sims),actions] -= 1
+            # cum_rewards = rewards + gamma * cum_rewards
+            # cum_rewards = cum_rewards + gamma**i *rewards
+            # cum_constrains = utilities + gamma * cum_constrains
+            # cum_constrains = cum_constrains + gamma ** i * utilities
 
-            final_rewards=  cum_rewards+lam*cum_constrains
-            d_theta = d_softmax * final_rewards.reshape(-1,1)
-            grad_sum[states] += torch.mean(d_theta,dim=0)
-            ### next state
+
+            # final_rewards =  cum_rewards+lam*cum_constrains
+            # d_theta = d_softmax * final_rewards.unsqueeze(-1)
+            # grad_sum[states] += torch.mean(d_theta,dim=0)
+
+            states_list.append(states)
+            actions_list.append(actions)
+            rewards_list.append(rewards)
+            constrains_list.append(utilities)
+
+            ### next states
             states = next_states
+        cum_returns_list = mc_env.compute_returns(rewards_list,constrains_list,lam)
+
+        for i in range(horizon):
+            states = states_list[i]
+            actions = actions_list[i]
+            d_softmax = mc_env.theta_to_policy(theta)[states].clone()
+            d_softmax[np.arange(num_MC_sims),actions] -= 1
+            d_theta = d_softmax * cum_returns_list[i].unsqueeze(-1)
+            grad_sum[states] += torch.mean(d_theta,dim=0)
 
         grad = grad_sum 
         theta -= alpha * grad
         lam = torch.maximum(lam - beta * (cum_constrains.mean() - b).mean(), torch.tensor(0.0).to(device))
+
 
         if k % record_interval == 0:
             avg_reward,avg_constrain = mc_env.ell_approx(theta,num_MC_sims,horizon)

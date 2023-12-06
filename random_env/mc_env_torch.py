@@ -164,6 +164,16 @@ class MC_Env():
         print('Optimal Reward',ell_star)
         return ell_star
 
+    def compute_returns(self,rewards_list,constrains_list,lam):
+        # cum_rewards_list = []
+        # cum_constrains_list = []
+        cum_returns_list = [0]
+
+        for i in range(len(rewards_list)-1,-1,-1):
+            cum_returns_list.insert(0,(rewards_list[i]+ lam*constrains_list[i])+self.gamma*cum_returns_list[0])
+        return cum_returns_list[:-1]
+
+
     def plot_curve(self,reward,violation,label,record_interval=1,method='pg',out_dir='figs/'):
         os.makedirs(out_dir,exist_ok=True)
 
