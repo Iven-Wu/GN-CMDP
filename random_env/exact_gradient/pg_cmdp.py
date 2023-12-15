@@ -30,10 +30,10 @@ if __name__ == '__main__':
     num_iter = 5000
     record_interval = 1
     # alpha is the lr for theta
-    alpha = 0.1
+    alpha = 0.05
     # beta is the lr for lamda
-    beta = 0.1
-    constrain_threshold = 5
+    beta = 0.05
+    constrain_threshold = 6
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 
