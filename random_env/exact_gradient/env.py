@@ -109,7 +109,7 @@ class Random_Env():
         Pi[np.arange(self.num_state)[:, None], col_indices] = prob_reshaped
         return Pi
     
-        
+    
     def ell_theta(self,theta):
         prob = self.theta_to_policy(theta,self.num_state,self.num_action)
         Pi = self.get_Pi(prob,self.num_state,self.num_action)
@@ -132,7 +132,7 @@ class Random_Env():
         q_constrain_vals = np.dot(np.linalg.inv(mat),self.constrain)
         return qvals,q_constrain_vals
     
-    def get_optimum(self,):
+    def get_optimum(self,type):
         raw_vec = np.random.uniform(0,1,size=(self.num_state,self.num_action))
         prob_vec = raw_vec/raw_vec.sum(axis=1,keepdims=1)
         init_policy = prob_vec.flatten()
@@ -146,7 +146,10 @@ class Random_Env():
             curr_policy = new_policy
             Pi = self.get_Pi(curr_policy)
             mat = np.identity(self.num_state*self.num_action) - self.gamma*np.matmul(self.prob_transition,Pi)
-            q_vals = np.dot(np.linalg.inv(mat),self.reward)
+            if type == 'all':
+                q_vals = np.dot(np.linalg.inv(mat),self.reward+self.constrain)
+            else:
+                q_vals = np.dot(np.linalg.inv(mat),self.reward)
             new_policy = self.policy_iter(q_vals)
         
         print('Final policy',new_policy)

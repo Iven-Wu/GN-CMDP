@@ -11,8 +11,6 @@ from agent import Agent
 
 from tqdm import tqdm
 
-
-
 if __name__ == '__main__':
     num_state = 20
     num_action = 10
@@ -25,15 +23,17 @@ if __name__ == '__main__':
     NPG_agent = Agent(num_state=num_state,num_action=num_action,type='npg',policy_type=policy_type,gamma=gamma)
     GNPG_agent = Agent(num_state=num_state,num_action=num_action,type='gnpg',policy_type=policy_type,gamma=gamma)
 
-    ell_star = rm_env.get_optimum()
+    re_type = 'reward'
 
-    num_iter = 1000
+    ell_star = rm_env.get_optimum(type=re_type)
+
+    num_iter = 5000
     record_interval = 1
     # alpha is the lr for theta
-    alpha = 1
+    alpha = 0.1
     # beta is the lr for lamda
-    beta = 1
-    constrain_threshold = 5.
+    beta = 0.1
+    constrain_threshold = 5
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 
@@ -47,7 +47,7 @@ if __name__ == '__main__':
             prob = rm_env.theta_to_policy(agent.theta)
 
             qvals,q_constrain_vals = rm_env.get_q(prob)
-            gradient = agent.compute_grad(prob,qvals,q_constrain_vals)
+            gradient = agent.compute_grad(prob,qvals,q_constrain_vals,type=re_type)
             agent.theta += alpha*gradient
             ### constrain_violation
             V_constrain_vals = (np.sum((q_constrain_vals * prob).reshape((num_state,num_action)),axis=1) * rm_env.rho).sum()
@@ -57,7 +57,10 @@ if __name__ == '__main__':
             '''
             agent.lam = np.maximum(agent.lam-(beta*violation).mean(),0)
 
-            avg_reward = rm_env.ell(qvals,prob)
+            if re_type == 'all':
+                avg_reward = rm_env.ell(qvals+q_constrain_vals,prob)
+            else:
+                avg_reward = rm_env.ell(qvals,prob)
             agent.reward_list.append(ell_star-avg_reward)
             agent.violation_list.append(-violation.mean())
 

@@ -66,9 +66,9 @@ if __name__ == '__main__':
             actions = mc_env.get_action(theta,states)
 
             next_states, rewards,utilities = mc_env.env_step(states,actions)
-
             ### compute gradient
             d_softmax = mc_env.theta_to_policy(theta)[states].copy()
+            
             d_softmax[actions] -= 1
             # cum_rewards = rewards + gamma * cum_rewards
             cum_rewards = cum_rewards + gamma**i * rewards
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     pg_gap = []
     pg_violation = []
     start_time = time.time()
-    for k in tqdm(range(num_iter)):
+    for k in tqdm(range(0)):
         grad_sum = np.zeros_like(theta)
         for _ in range(num_MC_sims):
             state = np.random.choice(range(num_state))

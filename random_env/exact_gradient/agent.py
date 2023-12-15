@@ -28,9 +28,9 @@ class Agent(Random_Env):
         gradient_cons_q = self.grad(q_constrain_vals,prob,d_pi)/(1-self.gamma)
         # pdb.set_trace()
 
-        return gradient_q, gradient_cons_q
+        return gradient_q, gradient_cons_q, d_pi
 
-    def compute_fisher_information_matrix(self,prob):
+    def compute_fisher_information_matrix(self,prob,d_pi):
         
         prob_reshaped = prob.reshape(self.num_state, self.num_action)
         FIM = np.zeros((self.num_state * self.num_action, self.num_state * self.num_action))
@@ -38,7 +38,11 @@ class Agent(Random_Env):
             start = s*self.num_action
             end = (s+1)*self.num_action
             # FIM[start:end,start:end] = np.diag(prob_reshaped[s]) - prob_reshaped[s][:,np.newaxis] @ prob_reshaped[s][np.newaxis]
-            FIM[start:end,start:end] = np.eye(len(prob_reshaped[s])) - prob_reshaped[s][np.newaxis].T
+            # FIM[start:end,start:end] = np.eye(len(prob_reshaped[s])) - prob_reshaped[s][np.newaxis].T
+            I_pi = np.eye(self.num_action) - prob_reshaped[s][:,np.newaxis]
+            FIM[start:end,start:end] = (I_pi) @ (I_pi).T
+            FIM[start:end,start:end] *= d_pi[s]
+            FIM[start:end,start:end] *= prob[start:end]
 
         # FIM = np.zeros((self.num_action,self.num_action))
         # for s in range(self.num_state):
@@ -59,8 +63,8 @@ class Agent(Random_Env):
         # natural_gradient = natural_gradient.flatten()
         return natural_gradient
 
-    def compute_grad(self,prob,qvals,q_constrain_vals):
-        gradient_q, gradient_cons_q = self.compute_grad_raw(prob,qvals,q_constrain_vals)
+    def compute_grad(self,prob,qvals,q_constrain_vals,type='all'):
+        gradient_q, gradient_cons_q,d_pi = self.compute_grad_raw(prob,qvals,q_constrain_vals)
         gradient_raw = gradient_q + self.lam * gradient_cons_q
         # pdb.set_trace()
         # print(np.linalg.norm(gradient_raw))
@@ -68,29 +72,18 @@ class Agent(Random_Env):
             # pdb.set_trace()
             gradient = gradient_raw
         elif self.type == 'npg':
-            # pdb.set_trace()
-            # FIM = self.compute_fisher_information_matrix(prob)
-            # gradient= self.compute_natural_gradient(gradient_raw,FIM)
-
-            qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
+            qvals_reshaped = (qvals+self.lam*q_constrain_vals).reshape((self.num_state,self.num_action))
+            # else:
+            #     qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
             prob_reshaped = prob.reshape((self.num_state,self.num_action))
             values = np.sum(qvals_reshaped*prob_reshaped,axis=1,keepdims=True)
             advantage = qvals_reshaped - values
             # pdb.set_trace()
             gradient = advantage.flatten()/(1-self.gamma)
 
-
-            # qvals_reshaped = qvals.reshape((self.num_state,self.num_action))
-            # prob_reshaped = prob.reshape((self.num_state,self.num_action))
-            # V = np.sum(qvals_reshaped * prob_reshaped, axis=1)
-            # # values = qvals_reshaped @ prob.reshape((self.nu))
-
-            # gradient = (qvals_reshaped - V.reshape(-1,1))/(1-self.gamma)
-            # gradient = gradient.flatten()
-            # pdb.set_trace()
         elif self.type == 'gnpg':
             gradient_reshaped = gradient_raw.reshape((self.num_state,self.num_action))
-            gradient_reshaped = gradient_reshaped/np.linalg.norm(gradient_reshaped,axis=1,keepdims=True)
+            gradient_reshaped = gradient_reshaped/np.linalg.norm(gradient_reshaped)
             gradient = gradient_reshaped.flatten()
             
             # gradient = gradient_raw/np.linalg.norm(gradient_raw)

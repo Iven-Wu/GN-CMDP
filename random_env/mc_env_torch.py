@@ -7,22 +7,27 @@ import pdb
 import time 
 import os
 import torch
+import torch.nn.functional as F
 
 class MC_Env():
     def __init__(self, num_state, num_action, policy_type, gamma=0.9,device='cpu'):
+        np.random.seed(10) 
         torch.manual_seed(10)  # Set seed for reproducibility
         self.gamma = gamma
         self.device = device
         self.num_state, self.num_action = num_state, num_action
 
         # Generate the raw transition probabilities
-        raw_transition = torch.rand(size=(num_state * num_action, num_state)).to(self.device)
+        raw_transition = torch.tensor(np.random.uniform(0,1,size=(num_state*num_action,num_state)),device=device).float()
+        # raw_transition = torch.rand(size=(num_state * num_action, num_state)).to(self.device)
         prob_transition = raw_transition / raw_transition.sum(dim=1, keepdim=True)
         self.prob_transition = prob_transition.view(num_state, num_action, num_state)
 
         # Generate random rewards and constraints
-        self.reward_mat = torch.rand(size=(num_state, num_action)).to(self.device)
-        self.constrain_mat = torch.rand(size=(num_state, num_action)).to(self.device)
+        # self.reward_mat = torch.rand(size=(num_state, num_action)).to(self.device)
+        self.reward_mat = torch.tensor(np.random.uniform(0,1,size=(num_state,num_action))).float().to(self.device)
+        # self.constrain_mat = torch.rand(size=(num_state, num_action)).to(self.device)
+        self.constrain_mat = torch.tensor(np.random.uniform(0,1,size=(num_state,num_action))).float().to(self.device)
 
         # Uniform distribution for rho
         self.rho = torch.ones(num_state).to(self.device) / num_state
@@ -74,7 +79,16 @@ class MC_Env():
         # Normalize each row to get probabilities
         prob = exp_theta / torch.sum(exp_theta, dim=1, keepdim=True)
         return prob
+        # log_prob = F.log_softmax(theta_reshaped, dim=1)
+        # return prob
+        # return log_prob
     
+    def theta_to_logpolicy(self,theta):
+        theta_reshaped = theta.view(self.num_state, self.num_action)
+        log_prob = F.log_softmax(theta_reshaped, dim=1)
+        # return prob
+        return log_prob
+
     def get_Pi(self, prob):
         prob_reshaped = prob.view(self.num_state, self.num_action)
         # Initialize Pi as a zero tensor
@@ -138,6 +152,17 @@ class MC_Env():
         V_g_rho = cum_constrains.mean()
 
         return V_r_rho, V_g_rho
+
+    def ell_theta(self,theta):
+        # pdb.set_trace()
+        prob = self.theta_to_policy(theta)
+        Pi = self.get_Pi(prob)
+        mat = torch.eye(self.num_state*self.num_action).cuda() - self.gamma*self.prob_transition.view(-1,self.num_state)@Pi
+
+        qvals = torch.linalg.inv(mat)@self.reward_mat.view(-1)
+
+        q_cons = torch.linalg.inv(mat)@self.constrain_mat.view(-1)
+        return self.ell(qvals,prob), self.ell(q_cons,prob)
 
     def get_optimum(self,):
         raw_vec = torch.rand(self.num_state, self.num_action).to(self.device)

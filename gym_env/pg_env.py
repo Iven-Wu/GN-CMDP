@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
+import pdb
 
 # Define the policy network
 class PolicyNetwork(nn.Module):
@@ -60,6 +61,7 @@ def train(env_name='CartPole-v1', n_episodes=500, gamma=0.99, learning_rate=0.01
 
         states = torch.from_numpy(np.stack(episode_states)).float()
         probs = policy_net(states)
+        pdb.set_trace()
         m = torch.distributions.Categorical(probs)
         loss = -m.log_prob(torch.tensor(episode_actions)) * returns
         loss = loss.mean()
