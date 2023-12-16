@@ -36,7 +36,7 @@ def compute_returns(rewards, gamma):
 
     return returns
 
-def train(env_name='CartPole-v1', n_episodes=500, gamma=0.99, learning_rate=0.01):
+def train(env_name='CartPole-v1', n_episodes=5000, gamma=0.99, learning_rate=0.01):
     env = gym.make(env_name)
     policy_net = PolicyNetwork()
     optimizer = optim.Adam(policy_net.parameters(), lr=learning_rate)
@@ -61,7 +61,6 @@ def train(env_name='CartPole-v1', n_episodes=500, gamma=0.99, learning_rate=0.01
 
         states = torch.from_numpy(np.stack(episode_states)).float()
         probs = policy_net(states)
-        pdb.set_trace()
         m = torch.distributions.Categorical(probs)
         loss = -m.log_prob(torch.tensor(episode_actions)) * returns
         loss = loss.mean()

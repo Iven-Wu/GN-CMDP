@@ -114,8 +114,8 @@ class MC_Env():
         start_time = time.time()
         raw_prob = self.theta_to_policy(theta)
         probs = raw_prob[states]
+        # pdb.set_trace()
         actions = torch.multinomial(probs, num_samples=1).squeeze()
-
         return actions
 
     def env_step(self, states, actions):
@@ -164,6 +164,19 @@ class MC_Env():
         q_cons = torch.linalg.inv(mat)@self.constrain_mat.view(-1)
         return self.ell(qvals,prob), self.ell(q_cons,prob)
 
+    def ell_network(self,theta,policy_net):
+        # pdb.set_trace()
+        # prob = self.theta_to_policy(theta)
+        prob = policy_net(theta)
+        Pi = self.get_Pi(prob)
+        mat = torch.eye(self.num_state*self.num_action).cuda() - self.gamma*self.prob_transition.view(-1,self.num_state)@Pi
+
+        qvals = torch.linalg.inv(mat)@self.reward_mat.view(-1)
+
+        q_cons = torch.linalg.inv(mat)@self.constrain_mat.view(-1)
+        return self.ell(qvals,prob), self.ell(q_cons,prob)
+
+
     def get_optimum(self,):
         raw_vec = torch.rand(self.num_state, self.num_action).to(self.device)
         prob_vec = raw_vec / raw_vec.sum(dim=1, keepdim=True)
@@ -180,23 +193,28 @@ class MC_Env():
             identity = torch.eye(self.num_state * self.num_action).to(self.device)
             gamma_term = self.gamma * torch.matmul(self.prob_transition.view(self.num_state * self.num_action, self.num_state), Pi)
             mat = identity - gamma_term
-            q_vals = torch.matmul(torch.linalg.inv(mat), self.reward_mat.flatten())
-            new_policy = self.policy_iter(q_vals)
+            self.q_vals = torch.matmul(torch.linalg.inv(mat), (self.reward_mat).flatten() )
+            new_policy = self.policy_iter(self.q_vals)
+            self.policy = new_policy
 
         print('Final policy', new_policy)
 
-        ell_star = self.ell(q_vals,new_policy)
+        ell_star = self.ell(self.q_vals,new_policy)
         print('Optimal Reward',ell_star)
         return ell_star
 
     def compute_returns(self,rewards_list,constrains_list,lam):
-        # cum_rewards_list = []
-        # cum_constrains_list = []
         cum_returns_list = [0]
-
+        cum_constrain_list = [0]
         for i in range(len(rewards_list)-1,-1,-1):
-            cum_returns_list.insert(0,(rewards_list[i]+ lam*constrains_list[i])+self.gamma*cum_returns_list[0])
-        return cum_returns_list[:-1]
+            # cum_R =(rewards_list[i]+ lam*constrains_list[i])+self.gamma*cum_returns_list[0]
+            cum_R = rewards_list[i] + self.gamma*cum_returns_list[0]
+            cum_returns_list.insert(0,cum_R)
+
+            cum_Con = constrains_list[i] + self.gamma*cum_constrain_list[0]
+            cum_constrain_list.insert(0,cum_Con)
+
+        return cum_returns_list[:-1], cum_constrain_list[:-1]
 
 
     def plot_curve(self,reward,violation,label,record_interval=1,method='pg',out_dir='figs/'):

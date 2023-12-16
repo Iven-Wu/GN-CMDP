@@ -19,7 +19,7 @@ class Agent(Random_Env):
         self.violation_list.append(violation)
 
     def compute_grad_raw(self,prob,qvals,q_constrain_vals):
-        Pi = self.get_Pi(prob)  
+        Pi = self.get_Pi(prob)
         ### p_theta is the probability from state s to state s'
         P_theta = np.matmul(Pi,self.prob_transition)
         d_pi = (1-self.gamma)*np.dot(np.transpose((np.linalg.inv(np.identity(self.num_state) - self.gamma*P_theta))),self.rho)

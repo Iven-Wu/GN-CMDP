@@ -12,8 +12,8 @@ from agent import Agent
 from tqdm import tqdm
 
 if __name__ == '__main__':
-    num_state = 20
-    num_action = 10
+    num_state = 10
+    num_action = 5
     gamma = 0.9
     np.random.seed(10) 
     policy_type = 'softmax'
@@ -30,10 +30,10 @@ if __name__ == '__main__':
     num_iter = 5000
     record_interval = 1
     # alpha is the lr for theta
-    alpha = 0.05
+    alpha = 0.1
     # beta is the lr for lamda
-    beta = 0.05
-    constrain_threshold = 6
+    beta = 0.1
+    constrain_threshold = 5
 
     # theta = np.random.uniform(0,1,size=num_state*num_action) ### information for policy compute
 
